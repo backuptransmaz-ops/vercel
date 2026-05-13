@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RPA TRANSMAZ — Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+      --border: #30363d; --text: #e6edf3; --text2: #8b949e; --text3: #484f58;
+      --green: #3fb950; --green-bg: #0d4429;
+      --amber: #d29922; --amber-bg: #341a00;
+      --red: #f85149; --red-bg: #3d0e0e;
+      --blue: #58a6ff; --blue-bg: #0c2d6b;
+      --radius: 8px; --radius-lg: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); font-size: 14px; min-height: 100vh; }
+
+    .topbar { background: var(--bg2); border-bottom: 1px solid var(--border); padding: 0 2rem; height: 56px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+    .logo-icon { width: 32px; height: 32px; background: var(--green-bg); border: 1px solid var(--green); border-radius: var(--radius); display: flex; align-items: center; justify-content: center; color: var(--green); font-size: 15px; }
+    .brand { font-size: 15px; font-weight: 600; letter-spacing: -0.02em; }
+    .brand span { color: var(--green); }
+    .topbar-right { display: flex; align-items: center; gap: 16px; }
+    .clock { font-size: 12px; color: var(--text2); font-variant-numeric: tabular-nums; }
+    .badge { display: flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 99px; font-size: 12px; font-weight: 500; border: 1px solid; }
+    .badge.online { background: var(--green-bg); color: var(--green); border-color: var(--green); }
+    .badge.offline { background: var(--red-bg); color: var(--red); border-color: var(--red); }
+    .pulse { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+    .container { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 1.5rem; }
+    .metric-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.25rem; }
+    .metric-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .metric-value { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+    .metric-sub { font-size: 11px; color: var(--text3); margin-top: 4px; }
+    .metric-card.green .metric-value { color: var(--green); }
+    .metric-card.blue .metric-value { color: var(--blue); }
+    .metric-card.amber .metric-value { color: var(--amber); }
+    .metric-card.red .metric-value { color: var(--red); }
+
+    .section { margin-bottom: 1.5rem; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text2); }
+
+    .pipeline { display: flex; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .pipe-step { flex: 1; padding: 1rem 1.25rem; border-right: 1px solid var(--border); transition: background 0.2s; }
+    .pipe-step:last-child { border-right: none; }
+    .pipe-num { font-size: 10px; color: var(--text3); margin-bottom: 6px; }
+    .pipe-icon { font-size: 18px; margin-bottom: 8px; color: var(--text2); }
+    .pipe-name { font-size: 13px; font-weight: 500; }
+    .pipe-status { font-size: 11px; margin-top: 4px; color: var(--text3); }
+    .pipe-step.done { background: #0d2818; border-bottom: 2px solid var(--green); }
+    .pipe-step.done .pipe-icon, .pipe-step.done .pipe-status { color: var(--green); }
+    .pipe-step.running { background: #1a1400; border-bottom: 2px solid var(--amber); }
+    .pipe-step.running .pipe-icon, .pipe-step.running .pipe-status { color: var(--amber); }
+    .pipe-step.error { background: var(--red-bg); border-bottom: 2px solid var(--red); }
+    .pipe-step.error .pipe-icon, .pipe-step.error .pipe-status { color: var(--red); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+    .three-col { display: grid; grid-template-columns: 1.5fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem; }
+
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+    .card-header { padding: 0.75rem 1.25rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; font-size: 13px; font-weight: 500; }
+    .card-header-right { font-size: 11px; color: var(--text2); }
+    .card-body { padding: 1rem 1.25rem; }
+
+    .log-body { max-height: 320px; overflow-y: auto; }
+    .log-entry { display: flex; align-items: flex-start; gap: 8px; padding: 5px 1.25rem; border-bottom: 1px solid var(--border); font-size: 12px; font-family: "SF Mono", "Consolas", monospace; }
+    .log-entry:last-child { border-bottom: none; }
+    .log-time { color: var(--text3); flex-shrink: 0; min-width: 60px; }
+    .log-tag { flex-shrink: 0; font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-top: 1px; }
+    .log-tag.nfe { background: var(--blue-bg); color: var(--blue); }
+    .log-tag.cte { background: var(--green-bg); color: var(--green); }
+    .log-tag.mdfe { background: #1a0d3d; color: #a371f7; }
+    .log-tag.sistema { background: var(--bg3); color: var(--text2); }
+    .log-msg { color: var(--text); flex: 1; word-break: break-word; }
+    .log-msg.warning { color: var(--amber); }
+    .log-msg.error { color: var(--red); }
+    .log-msg.success { color: var(--green); }
+
+    .nota-row { display: flex; align-items: center; gap: 12px; padding: 8px 1.25rem; border-bottom: 1px solid var(--border); font-size: 12px; }
+    .nota-row:last-child { border-bottom: none; }
+    .nota-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+    .nota-dot.ok { background: var(--green); }
+    .nota-dot.pending { background: var(--amber); }
+    .nota-chave { color: var(--text2); font-family: monospace; font-size: 11px; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .nota-placa { font-size: 11px; color: var(--text3); flex-shrink: 0; }
+    .nota-status { font-size: 10px; padding: 2px 8px; border-radius: 99px; flex-shrink: 0; }
+    .nota-status.ok { background: var(--green-bg); color: var(--green); }
+    .nota-status.pending { background: var(--amber-bg); color: var(--amber); }
+
+    .bar-section { padding: 0.75rem 1.25rem; }
+    .bar-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .bar-label { font-size: 12px; color: var(--text2); width: 80px; flex-shrink: 0; }
+    .bar-bg { flex: 1; height: 5px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: 99px; transition: width 0.5s ease; }
+    .bar-val { font-size: 12px; color: var(--text2); width: 35px; text-align: right; }
+
+    .refresh-btn { background: none; border: 1px solid var(--border); color: var(--text2); padding: 4px 10px; border-radius: var(--radius); font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
+    .refresh-btn:hover { border-color: var(--green); color: var(--green); }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg2); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    @media (max-width: 900px) {
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .pipeline { flex-direction: column; }
+      .pipe-step { border-right: none; border-bottom: 1px solid var(--border); }
+      .two-col, .three-col { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-icon"><i class="fa-solid fa-robot"></i></div>
+    <div>
+      <div class="brand">RPA <span>TRANSMAZ</span></div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="clock" id="clock">--:--:--</span>
+    <div class="badge online" id="conn-badge">
+      <span class="pulse"></span>
+      <span id="conn-text">Conectando</span>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <div class="metrics-grid">
+    <div class="metric-card">
+      <div class="metric-label"><i class="fa-solid fa-envelope"></i> E-mails</div>
+      <div class="metric-value" id="m-emails">—</div>
+      <div class="metric-sub">recebidos hoje</div>
+    </div>
+    <div class="metric-card green">
+      <div class="metric-label"><i class="fa-solid fa-file-invoice"></i> CT-e</div>
+      <div class="metric-value" id="m-cte">—</div>
+      <div class="metric-sub">emitidos hoje</div>
+    </div>
+    <div class="metric-card blue">
+      <div class="metric-label"><i class="fa-solid fa-truck"></i> MDF-e</div>
+      <div class="metric-value" id="m-mdfe">—</div>
+      <div class="metric-sub">emitidos hoje</div>
+    </div>
+    <div class="metric-card amber">
+      <div class="metric-label"><i class="fa-solid fa-copy"></i> Duplicatas</div>
+      <div class="metric-value" id="m-dup">—</div>
+      <div class="metric-sub">detectadas hoje</div>
+    </div>
+    <div class="metric-card red">
+      <div class="metric-label"><i class="fa-solid fa-triangle-exclamation"></i> Erros</div>
+      <div class="metric-value" id="m-err">—</div>
+      <div class="metric-sub">hoje</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <div class="section-title">Pipeline de automação</div>
+      <button class="refresh-btn" onclick="fetchAll()"><i class="fa-solid fa-rotate"></i> Atualizar</button>
+    </div>
+    <div class="pipeline">
+      <div class="pipe-step idle" id="ps-email">
+        <div class="pipe-num">01</div>
+        <div class="pipe-icon"><i class="fa-solid fa-envelope"></i></div>
+        <div class="pipe-name">Monitor Gmail</div>
+        <div class="pipe-status" id="pst-email">Aguardando</div>
+      </div>
+      <div class="pipe-step idle" id="ps-login">
+        <div class="pipe-num">02</div>
+        <div class="pipe-icon"><i class="fa-solid fa-right-to-bracket"></i></div>
+        <div class="pipe-name">Login Bsoft</div>
+        <div class="pipe-status" id="pst-login">Aguardando</div>
+      </div>
+      <div class="pipe-step idle" id="ps-cte">
+        <div class="pipe-num">03</div>
+        <div class="pipe-icon"><i class="fa-solid fa-file-invoice"></i></div>
+        <div class="pipe-name">Emissão CT-e</div>
+        <div class="pipe-status" id="pst-cte">Aguardando</div>
+      </div>
+      <div class="pipe-step idle" id="ps-mdfe">
+        <div class="pipe-num">04</div>
+        <div class="pipe-icon"><i class="fa-solid fa-truck-moving"></i></div>
+        <div class="pipe-name">Emissão MDF-e</div>
+        <div class="pipe-status" id="pst-mdfe">Aguardando</div>
+      </div>
+      <div class="pipe-step idle" id="ps-mon">
+        <div class="pipe-num">05</div>
+        <div class="pipe-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+        <div class="pipe-name">Monitoramento</div>
+        <div class="pipe-status" id="pst-mon">Aguardando</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div class="card">
+      <div class="card-header">
+        <span>CT-e por hora</span>
+        <span class="card-header-right">últimas 8h</span>
+      </div>
+      <div class="card-body">
+        <div style="position:relative; height:200px;">
+          <canvas id="chartHoras" role="img" aria-label="CT-e emitidos por hora"></canvas>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header">Desempenho do dia</div>
+      <div class="bar-section">
+        <div class="bar-row">
+          <span class="bar-label">Sucesso</span>
+          <div class="bar-bg"><div class="bar-fill" id="bar-ok" style="width:0%;background:var(--green);"></div></div>
+          <span class="bar-val" id="pct-ok">0%</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Duplicatas</span>
+          <div class="bar-bg"><div class="bar-fill" id="bar-dup" style="width:0%;background:var(--amber);"></div></div>
+          <span class="bar-val" id="pct-dup">0%</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Erros</span>
+          <div class="bar-bg"><div class="bar-fill" id="bar-err" style="width:0%;background:var(--red);"></div></div>
+          <span class="bar-val" id="pct-err">0%</span>
+        </div>
+      </div>
+      <div class="card-header" style="border-top:1px solid var(--border);border-bottom:none;margin-top:.5rem;">
+        Banco de dados
+      </div>
+      <div class="bar-section">
+        <div class="bar-row">
+          <span class="bar-label">Total NF-e</span>
+          <div class="bar-bg"><div class="bar-fill" style="width:100%;background:var(--blue);"></div></div>
+          <span class="bar-val" id="db-total">—</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Concluídas</span>
+          <div class="bar-bg"><div class="bar-fill" id="bar-conc" style="width:0%;background:var(--green);"></div></div>
+          <span class="bar-val" id="db-conc">—</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-label">Pendentes</span>
+          <div class="bar-bg"><div class="bar-fill" id="bar-pend" style="width:0%;background:var(--amber);"></div></div>
+          <span class="bar-val" id="db-pend">—</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="three-col">
+    <div class="card">
+      <div class="card-header">
+        <span>Log em tempo real</span>
+        <span class="card-header-right" id="log-count">— entradas</span>
+      </div>
+      <div class="log-body" id="log-body"></div>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <span>Notas de hoje</span>
+        <span class="card-header-right" id="nota-count">—</span>
+      </div>
+      <div style="max-height:340px;overflow-y:auto;" id="nota-body"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ─── CONFIGURAÇÃO SUPABASE ───────────────────────────
+const SUPABASE_URL = 'https://gqdimwzznztnebgbbmxe.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZGltd3p6bnp0bmViZ2JibXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODg1NDcsImV4cCI6MjA5NDI2NDU0N30.QvSH_JE7F-x7L15Y6uH044KlMAWdIC1Z-dUs4xE7QP0';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── RELÓGIO ─────────────────────────────────────────
+function pad(n) { return String(n).padStart(2,'0'); }
+function updateClock() {
+  const d = new Date();
+  document.getElementById('clock').textContent =
+    pad(d.getHours())+':'+pad(d.getMinutes())+':'+pad(d.getSeconds());
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ─── GRÁFICO ─────────────────────────────────────────
+const hours = [];
+for (let i = 7; i >= 0; i--) {
+  const h = (new Date().getHours() - i + 24) % 24;
+  hours.push(pad(h)+'h');
+}
+const chart = new Chart(document.getElementById('chartHoras'), {
+  type: 'bar',
+  data: { labels: hours, datasets: [{ label: 'CT-e', data: new Array(8).fill(0), backgroundColor: '#238636', borderRadius: 4 }] },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { color: '#21262d' }, ticks: { color: '#8b949e', font: { size: 11 } } },
+      y: { beginAtZero: true, grid: { color: '#21262d' }, ticks: { stepSize: 1, color: '#8b949e', font: { size: 11 } } }
+    }
+  }
+});
+
+// ─── PIPELINE ────────────────────────────────────────
+function setPipeStep(id, status, detalhes) {
+  const el = document.getElementById('ps-' + id);
+  const st = document.getElementById('pst-' + id);
+  el.className = 'pipe-step ' + (status || 'idle');
+  const labels = { done: 'Concluído', running: 'Executando...', error: 'Erro', idle: 'Aguardando' };
+  st.textContent = detalhes || labels[status] || 'Aguardando';
+}
+
+// ─── MÉTRICAS ────────────────────────────────────────
+function updateMetrics(metricas, notas) {
+  const emails = metricas.find(m => m.chave === 'emails_recebidos')?.valor || 0;
+  const cte    = metricas.find(m => m.chave === 'cte_emitidos')?.valor || 0;
+  const mdfe   = metricas.find(m => m.chave === 'mdfe_emitidos')?.valor || 0;
+  const dup    = metricas.find(m => m.chave === 'duplicatas')?.valor || 0;
+  const err    = metricas.find(m => m.chave === 'erros')?.valor || 0;
+
+  document.getElementById('m-emails').textContent = emails;
+  document.getElementById('m-cte').textContent    = cte;
+  document.getElementById('m-mdfe').textContent   = mdfe;
+  document.getElementById('m-dup').textContent    = dup;
+  document.getElementById('m-err').textContent    = err;
+
+  const total = Number(cte) + Number(dup) + Number(err);
+  const pok  = total ? Math.round(cte/total*100) : 0;
+  const pdup = total ? Math.round(dup/total*100) : 0;
+  const perr = total ? Math.round(err/total*100) : 0;
+  document.getElementById('bar-ok').style.width   = pok+'%';
+  document.getElementById('bar-dup').style.width  = pdup+'%';
+  document.getElementById('bar-err').style.width  = perr+'%';
+  document.getElementById('pct-ok').textContent   = pok+'%';
+  document.getElementById('pct-dup').textContent  = pdup+'%';
+  document.getElementById('pct-err').textContent  = perr+'%';
+
+  const total_notas = notas.length;
+  const concluidas  = notas.filter(n => n.automacao_concluida).length;
+  const pendentes   = total_notas - concluidas;
+  document.getElementById('db-total').textContent = total_notas;
+  document.getElementById('db-conc').textContent  = concluidas;
+  document.getElementById('db-pend').textContent  = pendentes;
+  document.getElementById('bar-conc').style.width = (total_notas ? Math.round(concluidas/total_notas*100) : 0)+'%';
+  document.getElementById('bar-pend').style.width = (total_notas ? Math.round(pendentes/total_notas*100) : 0)+'%';
+}
+
+// ─── LOG ──────────────────────────────────────────────
+function renderLogs(eventos) {
+  const body = document.getElementById('log-body');
+  const tagClass = { nfe:'nfe', cte:'cte', mdfe:'mdfe', monitoramento:'mdfe', sistema:'sistema' };
+  const lvlClass = { warning:'warning', error:'error', success:'success', info:'' };
+  body.innerHTML = eventos.map(e => {
+    const t = new Date(e.criado_em);
+    const time = pad(t.getHours())+':'+pad(t.getMinutes())+':'+pad(t.getSeconds());
+    return `<div class="log-entry">
+      <span class="log-time">${time}</span>
+      <span class="log-tag ${tagClass[e.tipo]||'sistema'}">${e.tipo}</span>
+      <span class="log-msg ${lvlClass[e.nivel]||''}">${e.mensagem}</span>
+    </div>`;
+  }).join('');
+  document.getElementById('log-count').textContent = eventos.length + ' entradas';
+}
+
+// ─── NOTAS ───────────────────────────────────────────
+function renderNotas(notas) {
+  const body = document.getElementById('nota-body');
+  document.getElementById('nota-count').textContent = notas.length + ' hoje';
+  if (!notas.length) {
+    body.innerHTML = '<div style="padding:1rem 1.25rem;color:var(--text3);font-size:12px;">Nenhuma nota hoje</div>';
+    return;
+  }
+  body.innerHTML = notas.map(n => `
+    <div class="nota-row">
+      <div class="nota-dot ${n.automacao_concluida ? 'ok' : 'pending'}"></div>
+      <div class="nota-chave">${n.chave_acesso || '—'}</div>
+      <div class="nota-placa">${n.placa_cavalo || ''}</div>
+      <div class="nota-status ${n.automacao_concluida ? 'ok' : 'pending'}">
+        ${n.automacao_concluida ? 'Concluída' : 'Pendente'}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── CHART HORÁRIO ───────────────────────────────────
+function updateChart(eventos) {
+  const contagem = {};
+  eventos.filter(e => e.tipo === 'cte' && e.nivel === 'success').forEach(e => {
+    const h = pad(new Date(e.criado_em).getHours()) + 'h';
+    contagem[h] = (contagem[h] || 0) + 1;
+  });
+  chart.data.datasets[0].data = hours.map(h => contagem[h] || 0);
+  chart.update('none');
+}
+
+// ─── FETCH PRINCIPAL ─────────────────────────────────
+async function fetchAll() {
+  const badge = document.getElementById('conn-badge');
+  const text  = document.getElementById('conn-text');
+  const hoje  = new Date().toISOString().split('T')[0];
+
+  try {
+    const [{ data: pipeline }, { data: metricas }, { data: eventos }, { data: notas }] = await Promise.all([
+      supabase.from('rpa_pipeline').select('*'),
+      supabase.from('rpa_metricas').select('*').eq('data', hoje),
+      supabase.from('rpa_eventos').select('*').gte('criado_em', hoje).order('criado_em', { ascending: false }).limit(100),
+      supabase.from('rpa_notas').select('*').gte('importado_em', hoje).order('importado_em', { ascending: false }).limit(30),
+    ]);
+
+    badge.className = 'badge online';
+    text.textContent = 'Online';
+
+    if (pipeline) pipeline.forEach(p => setPipeStep(p.etapa, p.status, p.detalhes));
+    if (metricas && notas) updateMetrics(metricas, notas || []);
+    if (eventos) { renderLogs(eventos); updateChart(eventos); }
+    if (notas) renderNotas(notas);
+
+  } catch(e) {
+    badge.className = 'badge offline';
+    text.textContent = 'Offline';
+    console.warn('Erro:', e.message);
+  }
+}
+
+// ─── REALTIME SUPABASE ───────────────────────────────
+supabase.channel('rpa_realtime')
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'rpa_eventos' }, fetchAll)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'rpa_pipeline' }, fetchAll)
+  .on('postgres_changes', { event: '*', schema: 'public', table: 'rpa_notas' }, fetchAll)
+  .subscribe();
+
+fetchAll();
+setInterval(fetchAll, 15000);
+</script>
+</body>
+</html>
