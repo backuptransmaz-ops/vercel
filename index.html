@@ -419,7 +419,7 @@ function updateMetrics(metricas, notas) {
 // ─── LOG ──────────────────────────────────────────────
 function formatarHora(iso) {
   const d = new Date(iso);
-  // Converte para horário de Brasília (UTC-3)
+  // Brasília = UTC-3: subtrai 3h do UTC
   const brasilia = new Date(d.getTime() - 3 * 60 * 60 * 1000);
   return pad(brasilia.getUTCHours()) + ':' + pad(brasilia.getUTCMinutes()) + ':' + pad(brasilia.getUTCSeconds());
 }
@@ -429,10 +429,11 @@ function renderLogs(eventos) {
   const tagClass = { nfe:'nfe', cte:'cte', mdfe:'mdfe', monitoramento:'mdfe', sistema:'sistema' };
   const lvlClass = { warning:'warning', error:'error', success:'success', info:'' };
   body.innerHTML = eventos.map(e => {
+    // new Date() converte automaticamente para o timezone do browser
     const t = new Date(e.criado_em);
     const time = pad(t.getHours())+':'+pad(t.getMinutes())+':'+pad(t.getSeconds());
     return `<div class="log-entry">
-      <span class="log-time">${formatarHora(e.criado_em)}</span>
+      <span class="log-time">${time}</span>
       <span class="log-tag ${tagClass[e.tipo]||'sistema'}">${e.tipo}</span>
       <span class="log-msg ${lvlClass[e.nivel]||''}">${e.mensagem}</span>
     </div>`;
