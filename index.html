@@ -106,7 +106,22 @@
     .refresh-btn { background: none; border: 1px solid var(--border); color: var(--text2); padding: 4px 10px; border-radius: var(--radius); font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: all 0.15s; }
     .refresh-btn:hover { border-color: var(--green); color: var(--green); }
 
-    ::-webkit-scrollbar { width: 6px; }
+    .cmd-btn {
+      background: none;
+      border: 1px solid;
+      border-radius: var(--radius);
+      padding: 8px 16px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s;
+      font-weight: 500;
+    }
+    .cmd-btn:hover { opacity: 0.8; background: rgba(255,255,255,0.05); }
+    .cmd-btn:active { transform: scale(0.97); }
+    .cmd-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     ::-webkit-scrollbar-track { background: var(--bg2); }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
@@ -168,7 +183,24 @@
 
   <div class="section">
     <div class="section-header">
-      <div class="section-title">Pipeline de automação</div>
+      <div class="section-title">Controle remoto</div>
+      <span class="card-header-right" id="cmd-status"></span>
+    </div>
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <button class="cmd-btn" onclick="enviarComando('reiniciar_rpa')" style="border-color:#f85149; color:#f85149;">
+        <i class="fa-solid fa-rotate-right"></i> Reiniciar RPA
+      </button>
+      <button class="cmd-btn" onclick="enviarComando('reiniciar_cte')" style="border-color:#3fb950; color:#3fb950;">
+        <i class="fa-solid fa-file-invoice"></i> Reiniciar CT-e
+      </button>
+      <button class="cmd-btn" onclick="enviarComando('reiniciar_mdfe')" style="border-color:#58a6ff; color:#58a6ff;">
+        <i class="fa-solid fa-truck-moving"></i> Reiniciar MDF-e
+      </button>
+      <button class="cmd-btn" onclick="enviarComando('pular_nota')" style="border-color:#d29922; color:#d29922;">
+        <i class="fa-solid fa-forward-step"></i> Pular Nota Atual
+      </button>
+    </div>
+  </div>
       <button class="refresh-btn" onclick="fetchAll()"><i class="fa-solid fa-rotate"></i> Atualizar</button>
     </div>
     <div class="pipeline">
@@ -283,6 +315,39 @@
 const SUPABASE_URL = 'https://gqdimwzznztnebgbbmxe.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZGltd3p6bnp0bmViZ2JibXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODg1NDcsImV4cCI6MjA5NDI2NDU0N30.QvSH_JE7F-x7L15Y6uH044KlMAWdIC1Z-dUs4xE7QP0';
 const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ─── COMANDOS REMOTOS ────────────────────────────────
+const labels_cmd = {
+  reiniciar_rpa:  '🔄 Reiniciando RPA...',
+  reiniciar_cte:  '🔄 Reiniciando CT-e...',
+  reiniciar_mdfe: '🔄 Reiniciando MDF-e...',
+  pular_nota:     '⏭️ Pulando nota atual...'
+};
+
+async function enviarComando(comando) {
+  const status = document.getElementById('cmd-status');
+  const btns = document.querySelectorAll('.cmd-btn');
+  btns.forEach(b => b.disabled = true);
+  if (status) status.textContent = labels_cmd[comando] || 'Enviando...';
+
+  try {
+    const { error } = await sbClient.from('rpa_comandos').insert({
+      comando: comando,
+      status: 'pendente'
+    });
+
+    if (error) throw error;
+
+    if (status) status.textContent = '✅ Comando enviado! O RPA vai executar em até 30s.';
+    setTimeout(() => {
+      if (status) status.textContent = '';
+      btns.forEach(b => b.disabled = false);
+    }, 10000);
+  } catch(e) {
+    if (status) status.textContent = '❌ Erro ao enviar comando: ' + e.message;
+    btns.forEach(b => b.disabled = false);
+  }
+}
 
 // ─── RELÓGIO ─────────────────────────────────────────
 function pad(n) { return String(n).padStart(2,'0'); }
