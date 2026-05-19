@@ -282,7 +282,7 @@
 // ─── CONFIGURAÇÃO SUPABASE ───────────────────────────
 const SUPABASE_URL = 'https://gqdimwzznztnebgbbmxe.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdxZGltd3p6bnp0bmViZ2JibXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2ODg1NDcsImV4cCI6MjA5NDI2NDU0N30.QvSH_JE7F-x7L15Y6uH044KlMAWdIC1Z-dUs4xE7QP0';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ─── RELÓGIO ─────────────────────────────────────────
 function pad(n) { return String(n).padStart(2,'0'); }
@@ -413,10 +413,10 @@ async function fetchAll() {
 
   try {
     const [{ data: pipeline }, { data: metricas }, { data: eventos }, { data: notas }] = await Promise.all([
-      supabase.from('rpa_pipeline').select('*'),
-      supabase.from('rpa_metricas').select('*').eq('data', hoje),
-      supabase.from('rpa_eventos').select('*').gte('criado_em', hoje).order('criado_em', { ascending: false }).limit(100),
-      supabase.from('rpa_notas').select('*').gte('importado_em', hoje).order('importado_em', { ascending: false }).limit(30),
+      sbClient.from('rpa_pipeline').select('*'),
+      sbClient.from('rpa_metricas').select('*').eq('data', hoje),
+      sbClient.from('rpa_eventos').select('*').gte('criado_em', hoje).order('criado_em', { ascending: false }).limit(100),
+      sbClient.from('rpa_notas').select('*').gte('importado_em', hoje).order('importado_em', { ascending: false }).limit(30),
     ]);
 
     badge.className = 'badge online';
@@ -435,7 +435,7 @@ async function fetchAll() {
 }
 
 // ─── REALTIME SUPABASE ───────────────────────────────
-supabase.channel('rpa_realtime')
+sbClient.channel('rpa_realtime')
   .on('postgres_changes', { event: '*', schema: 'public', table: 'rpa_eventos' }, fetchAll)
   .on('postgres_changes', { event: '*', schema: 'public', table: 'rpa_pipeline' }, fetchAll)
   .on('postgres_changes', { event: '*', schema: 'public', table: 'rpa_notas' }, fetchAll)
