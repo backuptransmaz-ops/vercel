@@ -317,6 +317,7 @@ const chart = new Chart(document.getElementById('chartHoras'), {
 function setPipeStep(id, status, detalhes) {
   const el = document.getElementById('ps-' + id);
   const st = document.getElementById('pst-' + id);
+  if (!el || !st) return;  // elemento não encontrado, ignora
   el.className = 'pipe-step ' + (status || 'idle');
   const labels = { done: 'Concluído', running: 'Executando...', error: 'Erro', idle: 'Aguardando' };
   st.textContent = detalhes || labels[status] || 'Aguardando';
@@ -330,22 +331,18 @@ function updateMetrics(metricas, notas) {
   const dup    = metricas.find(m => m.chave === 'duplicatas')?.valor || 0;
   const err    = metricas.find(m => m.chave === 'erros')?.valor || 0;
 
-  document.getElementById('m-emails').textContent = emails;
-  document.getElementById('m-cte').textContent    = cte;
-  document.getElementById('m-mdfe').textContent   = mdfe;
-  document.getElementById('m-dup').textContent    = dup;
-  document.getElementById('m-err').textContent    = err;
+  const safe = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  safe('m-emails', emails); safe('m-cte', cte); safe('m-mdfe', mdfe);
+  safe('m-dup', dup); safe('m-err', err);
 
   const total = Number(cte) + Number(dup) + Number(err);
   const pok  = total ? Math.round(cte/total*100) : 0;
   const pdup = total ? Math.round(dup/total*100) : 0;
   const perr = total ? Math.round(err/total*100) : 0;
-  document.getElementById('bar-ok').style.width   = pok+'%';
-  document.getElementById('bar-dup').style.width  = pdup+'%';
-  document.getElementById('bar-err').style.width  = perr+'%';
-  document.getElementById('pct-ok').textContent   = pok+'%';
-  document.getElementById('pct-dup').textContent  = pdup+'%';
-  document.getElementById('pct-err').textContent  = perr+'%';
+  const sw = (id, val) => { const el = document.getElementById(id); if(el) el.style.width = val; };
+  const st = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  sw('bar-ok', pok+'%'); sw('bar-dup', pdup+'%'); sw('bar-err', perr+'%');
+  st('pct-ok', pok+'%'); st('pct-dup', pdup+'%'); st('pct-err', perr+'%');
 
   const total_notas = notas.length;
   const concluidas  = notas.filter(n => n.automacao_concluida).length;
