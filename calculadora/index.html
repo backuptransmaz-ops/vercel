@@ -1,0 +1,516 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Calculadora de M³ — Rodotrem</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #f0f6ff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    /* ── HEADER ────────────────────────────────────── */
+    header {
+      width: 100%;
+      background: linear-gradient(135deg, #0a2d6e 0%, #1a5fb4 60%, #2d8de0 100%);
+      padding: 32px 24px 28px;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(10,45,110,.45);
+      position: relative;
+      overflow: hidden;
+    }
+    header::before {
+      content: '';
+      position: absolute;
+      top: -60px; right: -60px;
+      width: 240px; height: 240px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.06);
+    }
+    header::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; left: -40px;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.04);
+    }
+    .header-logo {
+      height: 90px;
+      width: auto;
+      margin-bottom: 14px;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,.35));
+      border-radius: 12px;
+    }
+    header h1 {
+      color: #fff;
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: .5px;
+      text-shadow: 0 2px 8px rgba(0,0,0,.3);
+    }
+    header p {
+      color: rgba(255,255,255,.82);
+      font-size: .95rem;
+      margin-top: 6px;
+      letter-spacing: .3px;
+    }
+
+    /* ── MAIN CONTAINER ───────────────────────────── */
+    main {
+      width: 100%;
+      max-width: 900px;
+      padding: 36px 20px 60px;
+    }
+
+    /* ── TRUCK SVG ILLUSTRATION ───────────────────── */
+    .truck-banner {
+      background: linear-gradient(135deg, #e8f2ff, #fff);
+      border: 1.5px solid #c5dcf7;
+      border-radius: 18px;
+      padding: 24px 20px;
+      margin-bottom: 32px;
+      text-align: center;
+      box-shadow: 0 2px 12px rgba(26,95,180,.08);
+    }
+    .truck-svg { width: 100%; max-width: 600px; height: auto; }
+
+    /* ── CARDS GRID ───────────────────────────────── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 24px;
+      margin-bottom: 28px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px 24px;
+      box-shadow: 0 4px 24px rgba(10,45,110,.08);
+      border: 1.5px solid #d6eaff;
+      transition: transform .2s, box-shadow .2s;
+    }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(10,45,110,.13); }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid #e8f2ff;
+    }
+    .card-icon {
+      width: 46px; height: 46px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1a5fb4, #2d8de0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 4px 12px rgba(26,95,180,.35);
+    }
+    .card-title { font-size: 1.15rem; font-weight: 700; color: #0a2d6e; }
+    .card-subtitle { font-size: .78rem; color: #6b90c2; margin-top: 2px; }
+
+    /* INPUTS */
+    .field { margin-bottom: 18px; }
+    .field label {
+      display: block;
+      font-size: .82rem;
+      font-weight: 600;
+      color: #2c4d7a;
+      margin-bottom: 7px;
+      letter-spacing: .3px;
+    }
+    .input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .input-wrap input {
+      width: 100%;
+      padding: 12px 52px 12px 16px;
+      border: 2px solid #c5dcf7;
+      border-radius: 12px;
+      font-size: 1rem;
+      color: #0a2d6e;
+      background: #f5f9ff;
+      outline: none;
+      transition: border .2s, box-shadow .2s, background .2s;
+      font-weight: 600;
+    }
+    .input-wrap input:focus {
+      border-color: #1a5fb4;
+      background: #fff;
+      box-shadow: 0 0 0 3px rgba(26,95,180,.12);
+    }
+    .input-unit {
+      position: absolute;
+      right: 14px;
+      font-size: .8rem;
+      font-weight: 700;
+      color: #1a5fb4;
+      pointer-events: none;
+    }
+
+    /* MINI RESULT per card */
+    .mini-result {
+      margin-top: 20px;
+      padding: 14px 18px;
+      background: linear-gradient(135deg, #e8f2ff, #dbeeff);
+      border-radius: 12px;
+      border: 1.5px solid #b3d4f5;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .mini-result-label { font-size: .82rem; color: #2c4d7a; font-weight: 600; }
+    .mini-result-value {
+      font-size: 1.35rem;
+      font-weight: 800;
+      color: #0a2d6e;
+    }
+    .mini-result-value span { font-size: .75rem; font-weight: 600; color: #1a5fb4; margin-left: 3px; }
+
+    /* ── ACTION BUTTON ───────────────────────────── */
+    .btn-calc {
+      width: 100%;
+      padding: 18px;
+      background: linear-gradient(135deg, #0a2d6e 0%, #1a5fb4 50%, #2d8de0 100%);
+      color: #fff;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: .6px;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      box-shadow: 0 6px 24px rgba(26,95,180,.4);
+      transition: opacity .2s, transform .15s, box-shadow .2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .btn-calc:hover { opacity: .92; transform: translateY(-2px); box-shadow: 0 10px 30px rgba(26,95,180,.5); }
+    .btn-calc:active { transform: translateY(0); }
+
+    /* ── TOTAL RESULT ─────────────────────────────── */
+    .result-box {
+      background: linear-gradient(135deg, #0a2d6e 0%, #1a5fb4 60%, #2d8de0 100%);
+      border-radius: 22px;
+      padding: 36px 30px;
+      text-align: center;
+      box-shadow: 0 8px 40px rgba(10,45,110,.35);
+      display: none;
+      animation: fadeIn .4s ease;
+    }
+    @keyframes fadeIn { from { opacity:0; transform: translateY(12px); } to { opacity:1; transform: none; } }
+
+    .result-box h2 {
+      color: rgba(255,255,255,.8);
+      font-size: .95rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+    .result-total {
+      font-size: 4rem;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1;
+      text-shadow: 0 2px 16px rgba(0,0,0,.25);
+    }
+    .result-total sup { font-size: 1.6rem; vertical-align: super; }
+    .result-breakdown {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+    .breakdown-item {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 14px;
+      padding: 14px 22px;
+      text-align: center;
+      backdrop-filter: blur(6px);
+    }
+    .breakdown-item .bi-label { font-size: .75rem; color: rgba(255,255,255,.7); font-weight: 600; letter-spacing: .4px; }
+    .breakdown-item .bi-value { font-size: 1.4rem; font-weight: 800; color: #fff; margin-top: 4px; }
+    .breakdown-item .bi-unit { font-size: .7rem; color: rgba(255,255,255,.7); }
+
+    /* ── RESET ────────────────────────────────────── */
+    .btn-reset {
+      margin-top: 20px;
+      padding: 10px 28px;
+      background: rgba(255,255,255,.15);
+      border: 1.5px solid rgba(255,255,255,.35);
+      border-radius: 10px;
+      color: #fff;
+      font-size: .88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-reset:hover { background: rgba(255,255,255,.25); }
+
+    /* ── FOOTER ───────────────────────────────────── */
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: #6b90c2;
+      font-size: .8rem;
+    }
+
+    /* ── RESPONSIVE ───────────────────────────────── */
+    @media (max-width: 500px) {
+      header h1 { font-size: 1.5rem; }
+      .result-total { font-size: 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════════════ -->
+<header>
+  <img class="header-logo" src="logo.jpg" alt="Transmaz Logística e Transportes"/>
+  <h1>Calculadora de M³ — Rodotrem</h1>
+  <p>Calcule o volume cúbico das carretas com precisão</p>
+</header>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════════════ -->
+<main>
+
+  <!-- Ilustração do rodotrem -->
+  <div class="truck-banner">
+    <svg class="truck-svg" viewBox="0 0 680 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Cabine -->
+      <rect x="8" y="38" width="90" height="54" rx="10" fill="#1a5fb4"/>
+      <rect x="18" y="22" width="70" height="38" rx="8" fill="#2d8de0"/>
+      <rect x="22" y="26" width="28" height="24" rx="4" fill="#b3d9f7" opacity=".9"/>
+      <rect x="54" y="26" width="28" height="24" rx="4" fill="#b3d9f7" opacity=".9"/>
+      <!-- Para-choque -->
+      <rect x="6" y="82" width="8" height="10" rx="2" fill="#0a2d6e"/>
+      <!-- Engate cabine→carreta1 -->
+      <rect x="98" y="72" width="22" height="6" rx="3" fill="#0a2d6e"/>
+
+      <!-- Carreta 1 -->
+      <rect x="120" y="42" width="210" height="50" rx="8" fill="#1a5fb4"/>
+      <rect x="122" y="44" width="206" height="46" rx="7" fill="#e8f2ff" opacity=".15"/>
+      <text x="225" y="72" text-anchor="middle" fill="white" font-size="13" font-weight="700" font-family="Segoe UI, sans-serif">CARRETA 1</text>
+      <!-- Rodas carreta 1 -->
+      <circle cx="168" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="168" cy="98" r="4" fill="#2d8de0"/>
+      <circle cx="200" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="200" cy="98" r="4" fill="#2d8de0"/>
+      <circle cx="280" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="280" cy="98" r="4" fill="#2d8de0"/>
+      <circle cx="312" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="312" cy="98" r="4" fill="#2d8de0"/>
+
+      <!-- Engate carreta1→carreta2 -->
+      <rect x="330" y="66" width="20" height="6" rx="3" fill="#0a2d6e"/>
+
+      <!-- Carreta 2 -->
+      <rect x="350" y="42" width="210" height="50" rx="8" fill="#0a2d6e"/>
+      <rect x="352" y="44" width="206" height="46" rx="7" fill="#1a5fb4" opacity=".3"/>
+      <text x="455" y="72" text-anchor="middle" fill="white" font-size="13" font-weight="700" font-family="Segoe UI, sans-serif">CARRETA 2</text>
+      <!-- Rodas carreta 2 -->
+      <circle cx="398" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="398" cy="98" r="4" fill="#2d8de0"/>
+      <circle cx="430" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="430" cy="98" r="4" fill="#2d8de0"/>
+      <circle cx="510" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="510" cy="98" r="4" fill="#2d8de0"/>
+      <circle cx="542" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="542" cy="98" r="4" fill="#2d8de0"/>
+
+      <!-- Rodas cabine -->
+      <circle cx="42" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="42" cy="98" r="4" fill="#2d8de0"/>
+      <circle cx="74" cy="98" r="12" fill="#0a2d6e" stroke="#2d8de0" stroke-width="3"/>
+      <circle cx="74" cy="98" r="4" fill="#2d8de0"/>
+
+      <!-- Farol -->
+      <circle cx="12" cy="62" r="5" fill="#ffe066" opacity=".9"/>
+    </svg>
+  </div>
+
+  <!-- ═══ CARDS DAS CARRETAS ═══════════════════════════════════════ -->
+  <div class="cards-grid">
+
+    <!-- CARRETA 1 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📦</div>
+        <div>
+          <div class="card-title">Carreta 1</div>
+          <div class="card-subtitle">Primeira unidade de carga</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>📏 Comprimento interno</label>
+        <div class="input-wrap">
+          <input type="number" id="c1-comp" placeholder="0,00" min="0" step="0.01" oninput="calcMini(1)"/>
+          <span class="input-unit">m</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>↔️ Largura interna</label>
+        <div class="input-wrap">
+          <input type="number" id="c1-larg" placeholder="0,00" min="0" step="0.01" oninput="calcMini(1)"/>
+          <span class="input-unit">m</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>↕️ Altura interna</label>
+        <div class="input-wrap">
+          <input type="number" id="c1-alt" placeholder="0,00" min="0" step="0.01" oninput="calcMini(1)"/>
+          <span class="input-unit">m</span>
+        </div>
+      </div>
+
+      <div class="mini-result">
+        <span class="mini-result-label">Volume Carreta 1</span>
+        <span class="mini-result-value" id="mini1">—<span>m³</span></span>
+      </div>
+    </div>
+
+    <!-- CARRETA 2 -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-icon">📦</div>
+        <div>
+          <div class="card-title">Carreta 2</div>
+          <div class="card-subtitle">Segunda unidade de carga</div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>📏 Comprimento interno</label>
+        <div class="input-wrap">
+          <input type="number" id="c2-comp" placeholder="0,00" min="0" step="0.01" oninput="calcMini(2)"/>
+          <span class="input-unit">m</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>↔️ Largura interna</label>
+        <div class="input-wrap">
+          <input type="number" id="c2-larg" placeholder="0,00" min="0" step="0.01" oninput="calcMini(2)"/>
+          <span class="input-unit">m</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>↕️ Altura interna</label>
+        <div class="input-wrap">
+          <input type="number" id="c2-alt" placeholder="0,00" min="0" step="0.01" oninput="calcMini(2)"/>
+          <span class="input-unit">m</span>
+        </div>
+      </div>
+
+      <div class="mini-result">
+        <span class="mini-result-label">Volume Carreta 2</span>
+        <span class="mini-result-value" id="mini2">—<span>m³</span></span>
+      </div>
+    </div>
+
+  </div><!-- /cards-grid -->
+
+  <!-- BOTÃO CALCULAR -->
+  <button class="btn-calc" onclick="calcTotal()">
+    <span style="font-size:1.3rem">📐</span>
+    CALCULAR VOLUME TOTAL
+  </button>
+
+  <!-- RESULTADO TOTAL -->
+  <div class="result-box" id="result-box">
+    <h2>🚛 Volume Total do Rodotrem</h2>
+    <div class="result-total" id="res-total">0<sup>m³</sup></div>
+
+    <div class="result-breakdown">
+      <div class="breakdown-item">
+        <div class="bi-label">CARRETA 1</div>
+        <div class="bi-value" id="res-c1">—</div>
+        <div class="bi-unit">m³</div>
+      </div>
+      <div class="breakdown-item" style="background:rgba(255,255,255,.07)">
+        <div class="bi-label">➕</div>
+        <div class="bi-value" style="font-size:2rem">+</div>
+        <div class="bi-unit">&nbsp;</div>
+      </div>
+      <div class="breakdown-item">
+        <div class="bi-label">CARRETA 2</div>
+        <div class="bi-value" id="res-c2">—</div>
+        <div class="bi-unit">m³</div>
+      </div>
+    </div>
+
+    <button class="btn-reset" onclick="reset()">🔄 Novo Cálculo</button>
+  </div>
+
+</main>
+
+<footer>
+  🚛 Calculadora de M³ — Rodotrem &nbsp;|&nbsp; Transmaz
+</footer>
+
+<script>
+  function getVal(id) {
+    const v = parseFloat(document.getElementById(id).value);
+    return isNaN(v) || v < 0 ? 0 : v;
+  }
+
+  function fmt(n) {
+    return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  function calcMini(n) {
+    const c = getVal(`c${n}-comp`);
+    const l = getVal(`c${n}-larg`);
+    const a = getVal(`c${n}-alt`);
+    const vol = c * l * a;
+    const el = document.getElementById(`mini${n}`);
+    if (c > 0 && l > 0 && a > 0) {
+      el.innerHTML = `${fmt(vol)}<span>m³</span>`;
+    } else {
+      el.innerHTML = `—<span>m³</span>`;
+    }
+  }
+
+  function calcTotal() {
+    const c1 = getVal('c1-comp') * getVal('c1-larg') * getVal('c1-alt');
+    const c2 = getVal('c2-comp') * getVal('c2-larg') * getVal('c2-alt');
+    const total = c1 + c2;
+
+    document.getElementById('res-c1').textContent = fmt(c1);
+    document.getElementById('res-c2').textContent = fmt(c2);
+    document.getElementById('res-total').innerHTML = `${fmt(total)}<sup>m³</sup>`;
+
+    const box = document.getElementById('result-box');
+    box.style.display = 'block';
+    box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function reset() {
+    ['c1-comp','c1-larg','c1-alt','c2-comp','c2-larg','c2-alt'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    document.getElementById('mini1').innerHTML = '—<span>m³</span>';
+    document.getElementById('mini2').innerHTML = '—<span>m³</span>';
+    document.getElementById('result-box').style.display = 'none';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+</script>
+</body>
+</html>
